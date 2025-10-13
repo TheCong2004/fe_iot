@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
+import '../../i18n/i18n';
 
 export default function HomePage() {
   const router = useRouter();
@@ -10,6 +12,7 @@ export default function HomePage() {
   const [activeMainTab, setActiveMainTab] = useState<'diemdanh' | 'quanly' | 'camera'>('diemdanh');
   const [activeSubTab, setActiveSubTab] = useState<'nguoidung' | 'thietbi'>('nguoidung');
   const [isQuanLyExpanded, setIsQuanLyExpanded] = useState(true); // mặc định mở
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -41,7 +44,7 @@ export default function HomePage() {
     if (activeMainTab === 'diemdanh') {
       return (
         <div className="p-6">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Điểm danh</h2>
+          <h2 className="text-2xl font-semibold text-gray-800 mb-4">{t('attendance')}</h2>
           <p className="text-gray-600">Chức năng điểm danh sẽ hiển thị ở đây.</p>
         </div>
       );
@@ -89,7 +92,7 @@ export default function HomePage() {
                 : 'hover:bg-gray-700'
             }`}
           >
-            Điểm danh
+            {t('attendance')}
           </button>
 
           {/* Quản lý - có mục con */}
@@ -102,7 +105,7 @@ export default function HomePage() {
                   : 'text-gray-200 hover:bg-gray-700'
               }`}
             >
-              <span>Quản lý</span>
+              <span>{t('management')}</span>
               <span>{isQuanLyExpanded ? '▲' : '▼'}</span>
             </button>
 
@@ -119,7 +122,7 @@ export default function HomePage() {
                       : 'text-gray-300 hover:text-white'
                   }`}
                 >
-                  Người dùng
+                  {t('user')}
                 </button>
                 <button
                   onClick={() => {
@@ -132,7 +135,7 @@ export default function HomePage() {
                       : 'text-gray-300 hover:text-white'
                   }`}
                 >
-                  Thiết bị
+                  {t('device')}
                 </button>
               </div>
             )}
@@ -147,9 +150,36 @@ export default function HomePage() {
                 : 'hover:bg-gray-700'
             }`}
           >
-            Camera (ESP-CAM)
+            {t('camera')}
           </button>
         </nav>
+
+          {/* Language Switcher */}
+          <div className="p-4 border-t border-gray-700">
+            <p className="text-gray-400 mb-2">{t('language')}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => i18n.changeLanguage('vi')}
+                className={`px-3 py-1 rounded ${
+                  i18n.language === 'vi'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                VI
+              </button>
+              <button
+                onClick={() => i18n.changeLanguage('en')}
+                className={`px-3 py-1 rounded ${
+                  i18n.language === 'en'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                EN
+              </button>
+            </div>
+          </div>
 
         {/* Thoát */}
         <div className="p-4 border-t border-gray-700">

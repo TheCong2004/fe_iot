@@ -1,0 +1,13 @@
+{
+  "attendance": "Điểm danh",
+  "management": "Quản lý",
+  "user": " người dùng",
+  "device": "thiết bị",
+  "camera": "Camera ",
+  "logout": "Thoát",
+  "checkingLogin": "Đang kiểm tra đăng nhập...",
+  "attendanceFeature": "Chức năng điểm danh sẽ hiển thị ở đây.",
+  "usersList": "Danh sách học sinh, giáo viên, tài khoản, v.v.",
+  "devicesList": "Danh sách ESP-CAM, máy tính, thiết bị IoT, v.v.",
+  "videoStream": "Luồng video từ ESP-CAM sẽ hiển thị ở đây."
+}

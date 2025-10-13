@@ -8,7 +8,7 @@ export default function HomePage() {
 
   useEffect(() => {
     // Khi component mount, tự động chuyển hướng sang /login
-    router.replace('/login'); // replace thay vì push để không lưu lại lịch sử
+    router.replace('./login'); // replace thay vì push để không lưu lại lịch sử
   }, [router]);
 
   return (

@@ -1,0 +1,13 @@
+{
+  "attendance": "Attendance",
+  "management": "Management",
+  "user": "User",
+  "device": "Device",
+  "camera": "Camera ",
+  "logout": "Logout",
+  "checkingLogin": "Checking login status...",
+  "attendanceFeature": "Attendance feature will be displayed here.",
+  "usersList": "List of students, teachers, accounts, etc.",
+  "devicesList": "List of ESP-CAM, computers, IoT devices, etc.",
+  "videoStream": "Video stream from ESP-CAM will appear here."
+}

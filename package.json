@@ -12,10 +12,13 @@
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
+    "i18next": "^25.6.0",
     "mongoose": "^8.19.1",
     "next": "15.5.4",
+    "next-intl": "^4.3.12",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "react-i18next": "^16.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
