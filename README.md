@@ -1,3 +1,46 @@
+# Project: Web diem danh bang nhan dien khuon mat
+
+Du an demo: Frontend Next.js + Backend Express + Smart Contract (Solidity) + MongoDB + IPFS placeholder.
+
+Thu muc chinh:
+- `contracts/` - hop dong AttendanceRecord.sol (da cung cap)
+- `backend/` - Express API ket noi contract va MongoDB
+- `src/` - Frontend Next.js (pages: /register, /attendance, /management)
+
+Hướng dẫn nhanh:
+
+1) Backend
+
+```powershell
+cd D:\fe_iot\backend
+cp .env.example .env
+# dien thong tin: RPC_URL, PRIVATE_KEY (neu muon gui tx), MONGODB_URI (neu muon luu DB)
+npm install
+npm run dev
+```
+
+2) Frontend
+
+```powershell
+cd D:\fe_iot
+# Next se dung bien NEXT_PUBLIC_BACKEND_URL de goi backend
+setx NEXT_PUBLIC_BACKEND_URL "http://localhost:4000"
+npm install
+npm run dev
+```
+
+3) Models face-api
+
+- Tai cac model face-api va copy vao `public/face-api-models/` theo `public/face-api-models/README.md`.
+
+4) Seed demo (tu backend)
+
+```powershell
+cd D:\fe_iot\backend
+node scripts/seed.js
+```
+
+Ghi chu: Neu ban muon hoan thien hoan toan (bao mat, chi cho phep backend goi contract, upload IPFS, UI tot hon), toi se tiep tuc lam them.
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

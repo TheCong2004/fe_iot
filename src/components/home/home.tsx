@@ -1,9 +1,12 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import '../../i18n/i18n';
+import AttendanceWidget from '@/components/home/AttendanceWidget';
+import ManagementWidget from '@/components/home/ManagementWidget';
+import UsersManagement from '@/components/home/UsersManagement';
 
 export default function HomePage() {
   const router = useRouter();
@@ -42,25 +45,13 @@ export default function HomePage() {
   // Xác định nội dung chính dựa trên main tab và sub tab
   const renderContent = () => {
     if (activeMainTab === 'diemdanh') {
-      return (
-        <div className="p-6">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">{t('attendance')}</h2>
-          <p className="text-gray-600">Chức năng điểm danh sẽ hiển thị ở đây.</p>
-        </div>
-      );
+      // Hiển thị danh sách điểm danh (management) khi vào mục điểm danh
+      return <ManagementWidget />;
     }
 
     if (activeMainTab === 'camera') {
-      return (
-        <div className="p-6">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Camera (ESP-CAM)</h2>
-          <div className="bg-black rounded-lg flex items-center justify-center h-96">
-            <p className="text-white text-center">
-              Luồng video từ ESP-CAM sẽ hiển thị ở đây.
-            </p>
-          </div>
-        </div>
-      );
+      // Cho tab Camera: hiển thị widget diem danh bang camera
+      return <AttendanceWidget />;
     }
 
     // activeMainTab === 'quanly'
@@ -70,7 +61,7 @@ export default function HomePage() {
           {activeSubTab === 'nguoidung' ? 'Quản lý người dùng' : 'Quản lý thiết bị'}
         </h2>
         {activeSubTab === 'nguoidung' ? (
-          <p className="text-gray-600">Danh sách học sinh, giáo viên, tài khoản, v.v.</p>
+          <UsersManagement />
         ) : (
           <p className="text-gray-600">Danh sách ESP-CAM, máy tính, thiết bị IoT, v.v.</p>
         )}
