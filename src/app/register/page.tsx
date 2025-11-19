@@ -3,11 +3,11 @@ import React, { useState, useCallback } from 'react';
 import CameraCapture from '@/components/CameraCapture';
 import FaceScanner from '@/components/FaceScanner';
 
-// Trang dang ky nhan vien: chup anh, lay descriptor bang face-api.js va gui len backend
+// Trang dang ky nhan vien: chup anh va gui len backend (LBPH)
 export default function RegisterPage() {
-  const [workerId, setWorkerId] = useState('');
   const [name, setName] = useState('');
   const [department, setDepartment] = useState('');
+  const [createdEmployee, setCreatedEmployee] = useState<any | null>(null);
   const [capturedDataUrl, setCapturedDataUrl] = useState<string | null>(null);
   const [capturedDescriptor, setCapturedDescriptor] = useState<number[] | null>(null);
   const [samples, setSamples] = useState<string[]>([]); // multiple capture samples
@@ -21,12 +21,7 @@ export default function RegisterPage() {
     if (samples.length === 1) setCapturedDataUrl(null);
   }
 
-  // Hàm loadFaceApi (Trang đăng ký)
-  // - Nếu face-api.js chưa có sẽ tải script từ CDN (unpkg)
-  // - Kiểm tra manifest model ở `public/face-api-models` trước khi load local để tránh 404
-  // - Nếu manifest local không tồn tại sẽ fallback tải model từ CDN
   const loadFaceApi = useCallback(async () => {
-    // load script tu unpkg neu chua co
     if (!(window as any).faceapi) {
       await new Promise<void>((resolve, reject) => {
         const s = document.createElement('script');
@@ -38,7 +33,6 @@ export default function RegisterPage() {
       });
     }
     const faceapi = (window as any).faceapi;
-
     const LOCAL_MODELS = '/face-api-models';
     const CDN_MODELS = [
       'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights',
@@ -64,22 +58,11 @@ export default function RegisterPage() {
           return true;
         }
         const cdns = Array.isArray(pathCdnArray) ? pathCdnArray : [pathCdnArray];
-        console.warn('Local manifest not found, will try CDN bases for:', manifestName);
         for (const cdnBase of cdns) {
-          try {
-            console.log('Trying CDN:', cdnBase);
-            await net.loadFromUri(cdnBase);
-            console.log('Loaded model from CDN base:', cdnBase);
-            return false;
-          } catch (e) {
-            console.warn('CDN base failed:', cdnBase, (e as any)?.message ?? e);
-          }
+          try { await net.loadFromUri(cdnBase); return true; } catch (e) { /* ignore */ }
         }
         throw new Error('All CDN bases failed for ' + manifestName);
-      } catch (e) {
-        console.warn('Model load failed for', manifestName, (e as any)?.message ?? e);
-        throw e;
-      }
+      } catch (e) { throw e; }
     }
 
     await tryLoad(faceapi.nets.ssdMobilenetv1, LOCAL_MODELS, CDN_MODELS, 'ssd_mobilenetv1_model-weights_manifest.json');
@@ -88,24 +71,19 @@ export default function RegisterPage() {
     return faceapi;
   }, []);
 
-  // Khi chụp: chỉ lấy descriptor và preview, người dùng có thể nhập tên & bộ phận rồi bấm Lưu
   async function handleCapture(dataUrl: string) {
-    // For LBPH backend we collect samples and send them to server for enrollment.
     setCapturedDataUrl(dataUrl);
     setSamples((s) => [...s, dataUrl]);
     setMsg(`Đã thêm sample (${samples.length + 1}). Bạn có thể chụp thêm hoặc bấm Lưu.`);
   }
 
-  // Khi quét tự động (FaceScanner) trả về dataUrl cho mục đăng ký
   function handleAutoDetected(d:{dataUrl:string}){
-    // add scanned frame as a sample
     setCapturedDataUrl(d.dataUrl);
     setSamples((s) => [...s, d.dataUrl]);
     setScanning(false);
     setMsg('Đã quét khuôn mặt và thêm vào samples. Bạn có thể chụp thêm hoặc bấm Lưu.');
   }
 
-  // Quét để điểm danh: so khớp descriptor với danh sách nhân viên rồi gọi /api/mark (server-only)
   async function handleAutoMarkDetected(d:{dataUrl:string}){
     setScanningForMark(false);
     setMsg('Đã quét, đang so khớp...');
@@ -113,7 +91,9 @@ export default function RegisterPage() {
       const backend = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
       setMsg('Gửi ảnh tới server để quét và lưu điểm danh...');
       try {
-        const markRes = await fetch(`${backend}/api/scan-and-mark`, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ dataUrl: d.dataUrl }) });
+        const body: any = { dataUrl: d.dataUrl };
+        if (createdEmployee && createdEmployee.workerId) body.id = createdEmployee.workerId;
+        const markRes = await fetch(`${backend}/api/scan-and-mark`, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(body) });
         const mj = await markRes.json();
         if (mj && mj.success) {
           const att = mj.attendance || mj.data || mj.result || null;
@@ -138,10 +118,8 @@ export default function RegisterPage() {
   }
 
   function handleStartScan(){ setMsg('Bắt đầu quét tự động...'); setScanning(true); }
-
   function handleCancelScan(){ setScanning(false); setMsg('Quét đã bị huỷ'); }
 
-  // Gọi khi người dùng bấm Lưu: upload ảnh nếu có, rồi gọi /api/register
   async function handleSave() {
     if (!samples || samples.length === 0) {
       setMsg('Chưa có sample nào để lưu. Vui lòng chụp ít nhất 1 ảnh.');
@@ -150,15 +128,15 @@ export default function RegisterPage() {
     setMsg('Đang lưu đăng ký...');
     try {
       const backend = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
-      const payload: any = { workerId: workerId || undefined, name: name || undefined, department: department || undefined, dataUrls: samples };
+      const payload: any = { name: name || undefined, department: department || undefined, dataUrls: samples };
       const res = await fetch(`${backend}/api/register`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       const j = await res.json();
       if (j && j.success) {
         setMsg('Đăng ký thành công');
-        // reset form
-        setWorkerId(''); setName(''); setDepartment(''); setCapturedDataUrl(null); setCapturedDescriptor(null); setSamples([]);
+        setName(''); setDepartment(''); setCapturedDataUrl(null); setCapturedDescriptor(null); setSamples([]);
+        if (j.employee) setCreatedEmployee(j.employee);
       } else {
         setMsg('Lỗi: ' + (j && j.error ? j.error : JSON.stringify(j)));
       }
@@ -175,10 +153,6 @@ export default function RegisterPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2">
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Worker ID (tuỳ chọn)</label>
-                <input className="mt-1 block w-full border border-gray-200 rounded px-3 py-2" value={workerId} onChange={(e) => setWorkerId(e.target.value)} />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Tên</label>
                 <input className="mt-1 block w-full border border-gray-200 rounded px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} />
@@ -239,6 +213,13 @@ export default function RegisterPage() {
                 <div className="mt-4 p-3 bg-green-50 border border-green-100 rounded">
                   <div className="text-sm font-medium">Đã khớp: {matchedEmployee.name || matchedEmployee.workerId}</div>
                   <div className="text-xs text-gray-600">WorkerId: {matchedEmployee.workerId}</div>
+                </div>
+              )}
+
+              {createdEmployee && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded">
+                  <div className="text-sm font-medium">Employee đã tạo: {createdEmployee.name || createdEmployee.workerId}</div>
+                  <div className="text-xs text-gray-600">WorkerId: {createdEmployee.workerId}</div>
                 </div>
               )}
             </div>

@@ -355,22 +355,39 @@ def api_scan_and_mark():
                 match_worker = None
         # save upload image
         url, fid = save_dataurl_image(dataUrl)
+
+        # If not matched to any employee, do NOT add to attendances collection.
+        if match_worker is None:
+            # return success but indicate unmatched; frontend will handle this case
+            return jsonify(success=True, matched=False, imageUrl=url, message='Person not in employee list')
+
+        # matched -> insert attendance record
         attendance = {
             'workerId': match_worker,
-            'matched': bool(match_worker is not None),
+            'matched': True,
             'confidence': match_conf,
             'imageUrl': url,
             'timestamp': datetime.datetime.utcnow()
         }
+
+        # Allow client to provide custom id (body.id) to be used as MongoDB _id (string).
+        # Validate uniqueness to avoid duplicate key error.
+        client_id = body.get('id')
+        if client_id:
+            # if a document with this _id already exists, return conflict
+            existing = attendance_col.find_one({'_id': client_id})
+            if existing:
+                return jsonify(success=False, error='Duplicate id'), 409
+            attendance['_id'] = client_id
+
         insert_res = attendance_col.insert_one(attendance)
         # attach inserted id and convert types
         attendance['_id'] = str(insert_res.inserted_id)
         result = {'success': True, 'attendance': make_serializable(attendance)}
-        if match_worker is not None:
-            emp = employees_col.find_one({'workerId': match_worker}, {'_id':0})
-            if emp:
-                emp.pop('samples', None)
-                result['employee'] = make_serializable(emp)
+        emp = employees_col.find_one({'workerId': match_worker}, {'_id':0})
+        if emp:
+            emp.pop('samples', None)
+            result['employee'] = make_serializable(emp)
         return jsonify(result)
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500

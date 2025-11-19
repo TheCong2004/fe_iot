@@ -7,11 +7,28 @@ export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetect
   const videoRef = useRef<HTMLVideoElement|null>(null);
   const canvasRef = useRef<HTMLCanvasElement|null>(null);
   const [msg, setMsg] = useState('');
+  const [running, setRunning] = useState(false);
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     let mounted = true;
     let stream: MediaStream | null = null;
+
+    if (!running) {
+      setMsg('');
+      // cleanup if stopping
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      try {
+        const v = videoRef.current;
+        if (v && v.srcObject) {
+          const st = v.srcObject as MediaStream;
+          st.getTracks().forEach(t=>t.stop());
+          v.srcObject = null;
+        }
+        if (canvasRef.current && canvasRef.current.parentElement) canvasRef.current.remove();
+      } catch (e) {}
+      return;
+    }
 
     async function start() {
       setMsg('Yêu cầu quyền camera...');
@@ -34,39 +51,41 @@ export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetect
           canvasRef.current = c;
         }
 
-        // Detection strategy: 1) Browser FaceDetector API, 2) face-api.js via CDN, 3) server-side detect
+        // Detection strategy: 1) Browser FaceDetector API (fast if available),
+        // 2) face-api.js (tiny model, loaded once from local `/face-api-models`),
+        // 3) server-side detect fallback.
         const useNative = 'FaceDetector' in window;
         let faceapi: any = null;
 
-        if (!useNative) {
-          // attempt to load face-api.js from CDN if native not available
-          if (!(window as any).faceapi) {
-            try {
-              await new Promise<void>((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = 'https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js';
-                s.async = true;
-                s.onload = () => resolve();
-                s.onerror = () => reject(new Error('Cannot load face-api.js'));
-                document.head.appendChild(s);
-              });
-            } catch (e) {
-              console.warn('face-api.js load failed, will fallback to server detect', e);
-            }
+        if (!(window as any).faceapi) {
+          try {
+            await new Promise<void>((resolve, reject) => {
+              const s = document.createElement('script');
+              s.src = 'https://unpkg.com/face-api.js@0.22.2/dist/face-api.min.js';
+              s.async = true;
+              s.onload = () => resolve();
+              s.onerror = () => reject(new Error('Cannot load face-api.js'));
+              document.head.appendChild(s);
+            });
+          } catch (e) {
+            console.warn('face-api.js load failed, will fallback to server detect', e);
           }
-          faceapi = (window as any).faceapi || null;
-          if (faceapi) {
-            setMsg('Đang tải mô hình face-api từ CDN...');
-            try {
-              const CDN = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
-              await faceapi.nets.ssdMobilenetv1.loadFromUri(CDN);
-              await faceapi.nets.faceLandmark68Net.loadFromUri(CDN);
-              await faceapi.nets.faceRecognitionNet.loadFromUri(CDN);
-              setMsg('Mô hình ready, quét...');
-            } catch (e) {
-              console.warn('face-api models load failed', e);
-              faceapi = null;
+        }
+        faceapi = (window as any).faceapi || null;
+
+        if (faceapi) {
+          try {
+            if (!(window as any)._faceApiModelsLoaded) {
+              setMsg('Đang tải mô hình nhẹ (tiny) của face-api...');
+              const MODEL_ROOT = '/face-api-models';
+              await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_ROOT);
+              await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_ROOT);
+              (window as any)._faceApiModelsLoaded = true;
             }
+            setMsg('Mô hình ready, quét...');
+          } catch (e) {
+            console.warn('face-api models load failed', e);
+            faceapi = null;
           }
         }
 
@@ -89,32 +108,32 @@ export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetect
               }
             }
 
-            let detected = null;
+            let detected: any = null;
 
             if (nativeDetector) {
               try {
                 const faces = await nativeDetector.detect(v);
                 if (faces && faces.length > 0) detected = faces[0].boundingBox; // {x,y,width,height}
-              } catch (e) {
-                // ignore native errors, fallthrough
-              }
+              } catch (e) {}
             }
 
             if (!detected && faceapi) {
               try {
-                const det = await faceapi.detectSingleFace(v).withFaceLandmarks();
-                if (det && det.detection && det.detection.box) {
-                  const b = det.detection.box; // { x, y, width, height }
-                  detected = { x: b.x, y: b.y, width: b.width, height: b.height };
+                const now = Date.now();
+                if (!(window as any)._lastFaceApiDetect) (window as any)._lastFaceApiDetect = 0;
+                if (now - (window as any)._lastFaceApiDetect > 250) {
+                  (window as any)._lastFaceApiDetect = now;
+                  const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+                  const det = await faceapi.detectSingleFace(v, opts).withFaceLandmarks();
+                  if (det && det.detection && det.detection.box) {
+                    const b = det.detection.box;
+                    detected = { x: b.x, y: b.y, width: b.width, height: b.height };
+                  }
                 }
-              } catch (e) {
-                // face-api error -> ignore
-              }
+              } catch (e) {}
             }
 
             if (!detected) {
-              // fallback: call server detect every ~800ms (not every frame)
-              // we'll capture a still and send
               if ((window as any)._lastServerDetect && Date.now() - (window as any)._lastServerDetect < 800) {
                 // skip
               } else {
@@ -130,9 +149,7 @@ export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetect
                   if (j && j.success && j.bbox) {
                     detected = { x: j.bbox.x, y: j.bbox.y, width: j.bbox.w, height: j.bbox.h };
                   }
-                } catch (e) {
-                  // server detect failed
-                }
+                } catch (e) {}
               }
             }
 
@@ -148,15 +165,15 @@ export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetect
             }
 
             if (detected) {
-              // require reasonable size relative to frame to avoid tiny false positives
               const area = (detected.width * detected.height) / (vw * vh);
-              if (area >= 0.02) { // at least 2% of frame
-                // capture and return
+              if (area >= 0.02) {
                 const c = document.createElement('canvas'); c.width = vw; c.height = vh; const ctx = c.getContext('2d'); if (ctx) ctx.drawImage(v,0,0);
                 const dataUrl = c.toDataURL('image/jpeg');
-                // stop stream
                 try { const st = v.srcObject as MediaStream; st.getTracks().forEach((t:any)=>t.stop()); } catch(e){}
-                if (mounted) onDetected({ dataUrl, bbox: { x: Math.round(detected.x), y: Math.round(detected.y), w: Math.round(detected.width), h: Math.round(detected.height) } });
+                if (mounted) {
+                  setRunning(false);
+                  onDetected({ dataUrl, bbox: { x: Math.round(detected.x), y: Math.round(detected.y), w: Math.round(detected.width), h: Math.round(detected.height) } });
+                }
                 return;
               }
             }
@@ -179,25 +196,29 @@ export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetect
 
     return () => {
       mounted = false;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
       try {
+        if (stream) stream.getTracks().forEach(t=>t.stop());
         const v = videoRef.current;
         if (v && v.srcObject) {
           const st = v.srcObject as MediaStream;
           st.getTracks().forEach(t=>t.stop());
         }
-        if (canvasRef.current && canvasRef.current.parentElement) {
-          try { canvasRef.current.remove(); } catch(e){}
-        }
+        if (canvasRef.current && canvasRef.current.parentElement) canvasRef.current.remove();
       } catch (e) {}
     };
-  }, [onDetected, onError]);
+  }, [running, onDetected, onError]);
 
   return (
     <div style={{ position: 'relative' }}>
       <div style={{ marginBottom: 8 }}>{msg}</div>
       <video ref={videoRef} style={{ width: '100%', maxWidth: 480, borderRadius: 6 }} playsInline muted />
       <div style={{ marginTop: 8 }}>
+        {!running ? (
+          <button onClick={() => setRunning(true)} style={{ marginRight: 8 }}>Bắt đầu quét</button>
+        ) : (
+          <button onClick={() => setRunning(false)} style={{ marginRight: 8 }}>Dừng quét</button>
+        )}
         <button onClick={() => { if (onCancel) onCancel(); else { /* nothing */ } }}>Hủy quét</button>
       </div>
     </div>

@@ -17,6 +17,8 @@ export default function AttendanceWidget() {
   // New behavior: use FaceScanner to detect faces and call server /api/scan-and-mark
   const [processing, setProcessing] = useState(false);
   const [lastMarked, setLastMarked] = useState<{ workerId?: string; ts: number } | null>(null);
+  const [customId, setCustomId] = useState('');
+  const [sendCustomId, setSendCustomId] = useState(false);
 
   async function handleDetected(d: { dataUrl: string; bbox?: { x:number,y:number,w:number,h:number } }) {
     if (processing) return;
@@ -25,8 +27,14 @@ export default function AttendanceWidget() {
     try {
       const backend = process.env.NEXT_PUBLIC_BACKEND_URL || '';
       if (!backend) throw new Error('Backend URL not configured');
-      const res = await fetch(`${backend}/api/scan-and-mark`, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ dataUrl: d.dataUrl }) });
+      const body: any = { dataUrl: d.dataUrl };
+      if (sendCustomId && customId && customId.trim()) body.id = customId.trim();
+      const res = await fetch(`${backend}/api/scan-and-mark`, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(body) });
       const j = await res.json();
+      if (res.status === 409) {
+        setMsg('Lỗi: id đã tồn tại (duplicate)');
+        return;
+      }
       if (j && j.success) {
         const att = j.attendance || j.data || j.result || null;
         if (att && att.workerId) {
@@ -62,6 +70,15 @@ export default function AttendanceWidget() {
           Ghi nhận on-chain (MetaMask)
         </label>
         <span style={{ color: '#666' }}> (bỏ chọn để chỉ lưu lên server, không cần MetaMask)</span>
+      </div>
+      <div style={{ marginBottom: 8 }}>
+        <label style={{ marginRight: 8 }}>
+          <input type="checkbox" checked={sendCustomId} onChange={(e) => setSendCustomId(e.target.checked)} />{' '}
+          Gửi `id` tùy chỉnh khi điểm danh
+        </label>
+        {sendCustomId ? (
+          <input style={{ marginLeft: 8 }} placeholder="Custom attendance id" value={customId} onChange={(e) => setCustomId(e.target.value)} />
+        ) : null}
       </div>
       <FaceScanner onDetected={handleDetected} />
       <div className="mt-3 text-gray-700">{msg}</div>
