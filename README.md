@@ -131,4 +131,13 @@ npx cap open android
  chạy lấy ip
 
 
- 
+ # nếu chưa có venv, tạo (chỉ chạy 1 lần)
+python -m venv .venv
+
+# kích hoạt venv (PowerShell)
+.\.venv\Scripts\Activate.ps1
+# của đen
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=dptsqgnaj
+NEXT_PUBLIC_CLOUDINARY_API_KEY=869664326499587
+CLOUDINARY_API_SECRET=_V1W8XOm6P0Di65u_7W6wxM8JJI
+CLOUDINARY_URL=cloudinary://869664326499587:

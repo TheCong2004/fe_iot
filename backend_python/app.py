@@ -9,6 +9,7 @@ from PIL import Image
 import numpy as np
 import cv2
 import json
+import subprocess
 
 # Load .env in same folder if present
 BASE_DIR = os.path.dirname(__file__)
@@ -27,6 +28,9 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 MODEL_PATH = os.path.join(MODEL_DIR, 'lbph_model.yml')
 LABELS_PATH = os.path.join(MODEL_DIR, 'labels.json')
 
+# If set to '1' or 'true', backend will attempt to record attendance on-chain
+BACKEND_ONCHAIN = os.getenv('BACKEND_ONCHAIN', 'false').lower() in ('1', 'true', 'yes')
+
 app = Flask(__name__)
 CORS(app)
 
@@ -35,6 +39,17 @@ client = MongoClient(MONGODB_URI)
 db = client.get_default_database()
 employees_col = db.get_collection('employees')
 attendance_col = db.get_collection('attendances')
+
+# Simple sequence generator for numeric IDs using a counters collection
+def get_next_sequence(name: str) -> int:
+    coll = db.get_collection('counters')
+    doc = coll.find_one_and_update({'_id': name}, {'$inc': {'seq': 1}}, upsert=True, return_document=True)
+    # If newly created doc may not have 'seq' set to 1 by return_document; ensure value
+    if not doc or 'seq' not in doc:
+        # initialize
+        coll.update_one({'_id': name}, {'$set': {'seq': 1}}, upsert=True)
+        return 1
+    return int(doc['seq'])
 
 # Helpers
 
@@ -183,7 +198,11 @@ def api_upload_image():
 @app.route('/api/register', methods=['POST'])
 def api_register():
     body = request.get_json(force=True)
-    workerId = body.get('workerId') or f"w_{uuid.uuid4().hex[:8]}"
+    # Generate a numeric workerId (as string) if client didn't provide one
+    workerId = body.get('workerId')
+    if not workerId:
+        seq = get_next_sequence('workerId_seq')
+        workerId = str(seq)
     name = body.get('name')
     department = body.get('department')
     dataUrl = body.get('dataUrl')
@@ -260,7 +279,11 @@ def api_employees():
 def api_employees_create():
     try:
         body = request.get_json(force=True) or {}
-        workerId = body.get('workerId') or f"w_{uuid.uuid4().hex[:8]}"
+        # If client didn't provide workerId, generate a numeric workerId using sequence
+        workerId = body.get('workerId')
+        if not workerId:
+            seq = get_next_sequence('workerId_seq')
+            workerId = str(seq)
         name = body.get('name')
         department = body.get('department')
         imageUrl = body.get('imageUrl')
@@ -388,6 +411,23 @@ def api_scan_and_mark():
         if emp:
             emp.pop('samples', None)
             result['employee'] = make_serializable(emp)
+        # If backend on-chain is enabled, call chain_notify.js to record on-chain
+        try:
+            if BACKEND_ONCHAIN:
+                # build args: node chain_notify.js recordAttendance <workerId> <ipfsHash> <matched>
+                # we pass workerId as numeric string and ipfs as imageUrl (can be empty)
+                script_path = os.path.join(BASE_DIR, 'chain_notify.js')
+                worker_arg = str(match_worker)
+                ipfs_arg = attendance.get('imageUrl', '') or ''
+                matched_arg = 'true' if attendance.get('matched', True) else 'false'
+                # spawn detached process so it doesn't block response
+                subprocess.Popen(['node', script_path, 'recordAttendance', worker_arg, ipfs_arg, matched_arg], cwd=BASE_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            # Do not block or fail the API if on-chain call fails; log to server
+            try:
+                app.logger.exception('Backend on-chain spawn failed')
+            except Exception:
+                pass
         return jsonify(result)
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500

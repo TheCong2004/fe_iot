@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-  "fetch-models": "node ./scripts/download-faceapi-models.js",
+    "fetch-models": "node ./scripts/download-faceapi-models.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -13,6 +13,7 @@
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
+    "ethers": "^6.15.0",
     "i18next": "^25.6.0",
     "mongoose": "^8.19.1",
     "next": "15.5.4",

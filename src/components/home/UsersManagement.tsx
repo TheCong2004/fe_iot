@@ -1,11 +1,12 @@
 "use client";
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function UsersManagement(){
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const backend = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
-  const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
@@ -35,23 +36,7 @@ export default function UsersManagement(){
         <div className="text-sm text-gray-500">{loading ? 'Đang tải...' : `${users.length} người`}</div>
       </div>
       <div className="mb-3">
-        <button className="px-3 py-1 bg-green-500 text-white rounded" onClick={async () => {
-          const workerId = window.prompt('Mã nhân viên (để trống để auto):') || '';
-          const name = window.prompt('Tên nhân viên:') || '';
-          const department = window.prompt('Bộ phận:') || '';
-          if (!name) return alert('Tên bắt buộc');
-          setSaving(true);
-          try{
-            const res = await fetch(`${backend}/api/employees`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workerId: workerId || undefined, name, department }) });
-            const j = await res.json();
-            if (j.success) {
-              setUsers((s) => [j.employee].concat(s));
-            } else {
-              alert('Tạo thất bại: ' + (j.error || ''));
-            }
-          }catch(e){ console.error(e); alert('Lỗi khi tạo'); }
-          setSaving(false);
-        }}>{saving ? 'Đang tạo...' : 'Thêm người dùng'}</button>
+        <button className="px-3 py-1 bg-green-500 text-white rounded" onClick={() => router.push('/register')}>Thêm người dùng</button>
       </div>
       {loading ? (
         <div className="text-gray-600">Đang tải dữ liệu...</div>

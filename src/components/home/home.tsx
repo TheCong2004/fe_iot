@@ -13,7 +13,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState<'diemdanh' | 'quanly' | 'camera'>('diemdanh');
-  const [activeSubTab, setActiveSubTab] = useState<'nguoidung' | 'thietbi'>('nguoidung');
+  const [activeSubTab, setActiveSubTab] = useState<'nguoidung' | 'lichsudiemdanh'>('nguoidung');
   const [isQuanLyExpanded, setIsQuanLyExpanded] = useState(true); // mặc định mở
   const { t, i18n } = useTranslation();
 
@@ -118,10 +118,10 @@ export default function HomePage() {
                 <button
                   onClick={() => {
                     setActiveMainTab('quanly');
-                    setActiveSubTab('thietbi');
+                    setActiveSubTab('lichsudiemdanh');
                   }}
                   className={`block w-full text-left px-3 py-1.5 rounded text-sm transition ${
-                    activeMainTab === 'quanly' && activeSubTab === 'thietbi'
+                    activeMainTab === 'quanly' && activeSubTab === 'lichsudiemdanh'
                       ? 'text-blue-300 font-medium'
                       : 'text-gray-300 hover:text-white'
                   }`}

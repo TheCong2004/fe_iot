@@ -63,7 +63,8 @@ export default function ManagementWidget() {
           <thead>
             <tr>
               <th className="px-4 py-2 border">ID</th>
-              <th className="px-4 py-2 border">Worker</th>
+              <th className="px-4 py-2 border"> Name</th>
+              <th className="px-4 py-2 border">Worker ID</th>
               <th className="px-4 py-2 border">Date</th>
               <th className="px-4 py-2 border">Time</th>
               <th className="px-4 py-2 border">CID</th>
@@ -74,7 +75,8 @@ export default function ManagementWidget() {
             {list.map((r) => (
               <tr key={r.id}>
                 <td className="px-4 py-2 border">{r.id}</td>
-                <td className="px-4 py-2 border">{r.workerName ? `${r.workerName} (${r.workerId || ''})` : (r.workerId || '')}</td>
+                <td className="px-4 py-2 border">{r.workerName || ''}</td>
+                <td className="px-4 py-2 border">{r.workerId || ''}</td>
                 <td className="px-4 py-2 border">{r.date}</td>
                 <td className="px-4 py-2 border">{r.time}</td>
                 <td className="px-4 py-2 border">
