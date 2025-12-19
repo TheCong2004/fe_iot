@@ -1,5 +1,18 @@
-"use client";
+
 import React, { useEffect, useState } from 'react';
+
+// Hàm yêu cầu xác nhận MetaMask trước khi thực hiện thao tác
+async function requestMetaMaskApproval(action: string, data: any) {
+  if (!(window as any).ethereum) throw new Error('MetaMask chưa được cài đặt');
+  const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+  const signer = accounts[0];
+  const msg = `Xác nhận thao tác: ${action}\nDữ liệu: ${JSON.stringify(data)}`;
+  const signature = await (window as any).ethereum.request({
+    method: 'personal_sign',
+    params: [msg, signer],
+  });
+  return signature;
+}
 
 export default function ManagementWidget() {
   const [list, setList] = useState<any[]>([]);
@@ -101,6 +114,9 @@ export default function ManagementWidget() {
                   <button className="px-2 py-1 bg-red-500 text-white rounded" onClick={async () => {
                     if (!confirm('Xóa bản ghi điểm danh này?')) return;
                     try {
+                      // Yêu cầu xác nhận MetaMask
+                      await requestMetaMaskApproval('Xóa điểm danh', { id: r.id, workerId: r.workerId });
+                      // Sau khi xác nhận, thực hiện API
                       const res = await fetch(`${backend}/api/attendances/${r.id}`, { method: 'DELETE' });
                       const j = await res.json();
                       if (j.success) {
@@ -108,7 +124,7 @@ export default function ManagementWidget() {
                       } else {
                         alert('Xóa thất bại: ' + (j.error || ''));
                       }
-                    } catch (e) { console.error(e); alert('Lỗi khi xóa'); }
+                    } catch (e) { console.error(e); alert('Lỗi khi xóa hoặc từ chối MetaMask'); }
                   }}>Xóa</button>
                 </td>
               </tr>

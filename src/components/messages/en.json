@@ -10,4 +10,6 @@
   "usersList": "List of students, teachers, accounts, etc.",
   "devicesList": "List of ESP-CAM, computers, IoT devices, etc.",
   "videoStream": "Video stream from ESP-CAM will appear here."
+  ,
+  "attendance_history": "Attendance History"
 }

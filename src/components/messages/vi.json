@@ -10,4 +10,6 @@
   "usersList": "Danh sách học sinh, giáo viên, tài khoản, v.v.",
   "devicesList": "Danh sách ESP-CAM, máy tính, thiết bị IoT, v.v.",
   "videoStream": "Luồng video từ ESP-CAM sẽ hiển thị ở đây."
+  ,
+  "attendance_history": "Lịch sử điểm danh"
 }

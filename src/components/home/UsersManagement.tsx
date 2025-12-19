@@ -1,5 +1,21 @@
 "use client";
 import React, { useEffect, useState } from 'react';
+// Hàm yêu cầu xác nhận MetaMask trước khi thực hiện thao tác
+async function requestMetaMaskApproval(action: string, data: any) {
+  if (!(window as any).ethereum) throw new Error('MetaMask chưa được cài đặt');
+  // Tùy action, có thể encode dữ liệu khác nhau
+  // Ví dụ: gửi tx lên contract với nội dung action và data
+  // Ở đây chỉ demo popup ký message
+  const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+  const signer = accounts[0];
+  const msg = `Xác nhận thao tác: ${action}\nDữ liệu: ${JSON.stringify(data)}`;
+  const signature = await (window as any).ethereum.request({
+    method: 'personal_sign',
+    params: [msg, signer],
+  });
+  // Sau này có thể gửi tx lên contract để ghi lịch sử
+  return signature;
+}
 import { useRouter } from 'next/navigation';
 
 export default function UsersManagement(){
@@ -67,6 +83,9 @@ export default function UsersManagement(){
                         const newName = window.prompt('Tên mới:', u.name || '') || u.name;
                         const newDept = window.prompt('Bộ phận mới:', u.department || '') || u.department;
                         try{
+                          // Yêu cầu xác nhận MetaMask
+                          await requestMetaMaskApproval('Sửa người dùng', { workerId: u.workerId, name: newName, department: newDept });
+                          // Sau khi xác nhận, thực hiện API
                           const res = await fetch(`${backend}/api/employees/${u.workerId}`, { method: 'PUT', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ name: newName, department: newDept }) });
                           const j = await res.json();
                           if (j.success) {
@@ -74,11 +93,14 @@ export default function UsersManagement(){
                           } else {
                             alert('Cập nhật thất bại: ' + (j.error || ''));
                           }
-                        }catch(e){ console.error(e); alert('Lỗi khi cập nhật'); }
+                        }catch(e){ console.error(e); alert('Lỗi khi cập nhật hoặc từ chối MetaMask'); }
                       }}>Sửa</button>
                       <button className="px-2 py-1 bg-red-500 text-white rounded" onClick={async () => {
                         if (!confirm('Xóa người dùng này?')) return;
                         try{
+                          // Yêu cầu xác nhận MetaMask
+                          await requestMetaMaskApproval('Xóa người dùng', { workerId: u.workerId });
+                          // Sau khi xác nhận, thực hiện API
                           const res = await fetch(`${backend}/api/employees/${u.workerId}`, { method: 'DELETE' });
                           const j = await res.json();
                           if (j.success) {
@@ -86,7 +108,7 @@ export default function UsersManagement(){
                           } else {
                             alert('Xóa thất bại: ' + (j.error || ''));
                           }
-                        }catch(e){ console.error(e); alert('Lỗi khi xóa'); }
+                        }catch(e){ console.error(e); alert('Lỗi khi xóa hoặc từ chối MetaMask'); }
                       }}>Xóa</button>
                     </td>
                   </tr>
