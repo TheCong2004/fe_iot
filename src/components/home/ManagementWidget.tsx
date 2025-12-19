@@ -1,8 +1,10 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 
 // Hàm yêu cầu xác nhận MetaMask trước khi thực hiện thao tác
-async function requestMetaMaskApproval(action: string, data: any) {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Hàm yêu cầu xác nhận MetaMask
+async function requestMetaMaskApproval(action: string, data: Record<string, unknown>) {
   if (!(window as any).ethereum) throw new Error('MetaMask chưa được cài đặt');
   const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
   const signer = accounts[0];
@@ -14,59 +16,76 @@ async function requestMetaMaskApproval(action: string, data: any) {
   return signature;
 }
 
+type Attendance = {
+  id: string;
+  workerId: string;
+  workerName?: string;
+  date: string;
+  time: string;
+  cid?: string;
+  imageUrl?: string;
+  image?: string;
+  matched?: boolean;
+  confidence?: number;
+};
+
 export default function ManagementWidget() {
-  const [list, setList] = useState<any[]>([]);
+  const [list, setList] = useState<Attendance[]>([]);
 
   const backend = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
 
-  useEffect(() => {
-    fetch(`${backend}/api/attendances`).then((r) => {
-      if (!r.ok) throw new Error('Network response not ok');
-      return r.json();
-    }).then((j) => {
-      if (j.success) setList(j.data || []);
-    }).catch((e) => console.warn('fetch attendances failed', e));
+  // Dùng useCallback để hàm này không bị tạo lại mỗi lần render -> Fix lỗi dependency
+  const fetchAttendances = useCallback(async () => {
+    try {
+      const res = await fetch(`${backend}/api/attendances`);
+      const j = await res.json();
+      if (j.success) setList(j.data as Attendance[] || []);
+    } catch (error) {
+      console.warn('fetch attendances failed', error);
+    }
   }, [backend]);
-
-  const fetchAttendances = async () => {
-    const backend = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
-    const res = await fetch(`${backend}/api/attendances`);
-    const j = await res.json();
-    if (j.success) setList(j.data || []);
-  };
 
   useEffect(() => {
     fetchAttendances();
-  }, []);
+  }, [fetchAttendances]);
 
   useEffect(() => {
-    // Listen for attendance updates triggered by the client (e.g., after camera scan)
-    const handler = (ev: any) => {
+    const handler = (ev: CustomEvent) => {
       const detail = ev?.detail || {};
-      const attendance = detail.attendance || detail.data || null;
+      const attendance = (detail.attendance || detail.data || null) as Attendance | null;
+
       if (attendance && attendance.id) {
-        // if we received attendance info from camera, prepend to list (optimistic)
         const date = attendance.date || '';
         const time = attendance.time || '';
-        const cid = attendance.imageUrl || attendance.cid || attendance.image || '';
-        const item = {
+        const cid: string = attendance.imageUrl || attendance.cid || attendance.image || '';
+
+        const item: Attendance = {
           id: attendance.id,
           workerId: attendance.workerId || '',
+          workerName: attendance.workerName,
           date,
           time,
-          cid,
+          cid: cid || '',
           matched: attendance.matched,
           confidence: attendance.confidence
         };
-        setList((s) => [item].concat(s.filter((x) => x.id !== item.id)).slice(0, 200));
+
+        setList((s) => {
+          const oldItems = s
+            .filter((x) => x.id !== item.id)
+            .map((x) => ({
+              ...x,
+              cid: x.cid || ''
+            }));
+          return [item, ...oldItems].slice(0, 200);
+        });
       } else {
-        // small debounce: wait a short moment for the chain/backend to settle, then refresh
         setTimeout(() => fetchAttendances(), 1200);
       }
     };
-    window.addEventListener('attendance:updated', handler as EventListener);
-    return () => window.removeEventListener('attendance:updated', handler as EventListener);
-  }, []);
+    window.addEventListener('attendance:updated', handler as any);
+    return () => window.removeEventListener('attendance:updated', handler as any);
+  }, [fetchAttendances]);
 
   return (
     <div className="p-6">
@@ -94,7 +113,7 @@ export default function ManagementWidget() {
                 <td className="px-4 py-2 border">{r.time}</td>
                 <td className="px-4 py-2 border">
                   {r.cid ? (
-                    <img src={r.cid.startsWith('http') ? r.cid : `${backend}${r.cid}`} alt="thumb" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} />
+                    <img src={r.cid.startsWith('http') ? r.cid : `${backend}${r.cid}`} alt={r.workerName ? `Ảnh ${r.workerName}` : `Ảnh ${r.cid}` } style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 4 }} />
                   ) : ('')}
                 </td>
                 <td className="px-4 py-2 border">

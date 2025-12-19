@@ -10,3 +10,7 @@ python -m venv .venv
 
 # kích hoạt venv (PowerShell)
 .\.venv\Scripts\Activate.ps1
+
+
+docker pull vothecong/quetmat:latest
+build docker file

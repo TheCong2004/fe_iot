@@ -61,7 +61,7 @@ export default function HomePage() {
           {/* Chỉ hiển thị dòng này trên Mobile (md:hidden) */}
           <div className="md:hidden p-4 text-center bg-blue-50 border-b border-blue-100 mb-2 rounded-lg mx-4 mt-4">
             <p className="font-semibold text-blue-800">Camera sẵn sàng.</p>
-            <p className="text-sm text-blue-600">Nhấn "Bắt đầu quét" để bắt đầu</p>
+            <p className="text-sm text-blue-600">Nhấn &quot;Bắt đầu quét&quot; để bắt đầu</p>
           </div>
           
           {/* Widget Camera */}

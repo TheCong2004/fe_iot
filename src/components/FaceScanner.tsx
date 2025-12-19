@@ -1,14 +1,20 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
 
-type Detected = { dataUrl: string; bbox?: { x:number,y:number,w:number,h:number } };
+type Detected = { dataUrl: string; bbox?: { x: number; y: number; w: number; h: number } };
 
-export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetected: (d:Detected)=>void; onError?: (e:Error)=>void; onCancel?: ()=>void }){
-  const videoRef = useRef<HTMLVideoElement|null>(null);
-  const canvasRef = useRef<HTMLCanvasElement|null>(null);
-  const [msg, setMsg] = useState('');
-  const [scanning, setScanning] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
+interface FaceScannerProps {
+  onDetected: (d: Detected) => void;
+  onError?: (e: Error) => void;
+  onCancel?: () => void;
+}
+
+export default function FaceScanner({ onDetected, onError, onCancel }: FaceScannerProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [msg, setMsg] = useState<string>('');
+  const [scanning, setScanning] = useState<boolean>(false);
+  const [cameraReady, setCameraReady] = useState<boolean>(false);
   const rafRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -31,10 +37,11 @@ export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetect
         
         setCameraReady(true);
         setMsg('Camera sẵn sàng. Nhấn "Bắt đầu quét" để bắt đầu.');
-      } catch (e:any) {
-        console.error('Camera error', e);
-        setMsg('Lỗi khi truy cập camera: ' + (e.message || e));
-        if (onError) onError(e);
+      } catch (e) {
+        const err = e as Error;
+        console.error('Camera error', err);
+        setMsg('Lỗi khi truy cập camera: ' + (err.message || String(e)));
+        if (onError) onError(err);
       }
     }
 
@@ -143,7 +150,7 @@ export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetect
           }
         }
 
-        let detected: any = null;
+        let detected: { x: number; y: number; width: number; height: number } | null = null;
 
         if (nativeDetector) {
           try {
@@ -232,9 +239,10 @@ export default function FaceScanner({ onDetected, onError, onCancel }:{ onDetect
             return;
           }
         }
-      } catch (e:any) {
-        console.error('FaceScanner tick error', e);
-        if (onError) onError(e);
+      } catch (e) {
+        const err = e as Error;
+        console.error('FaceScanner tick error', err);
+        if (onError) onError(err);
       }
       
       rafRef.current = requestAnimationFrame(tick);

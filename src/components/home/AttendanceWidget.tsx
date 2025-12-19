@@ -2,14 +2,23 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import FaceScanner from '@/components/FaceScanner';
 
+type Employee = {
+  workerId: string;
+  name?: string;
+  department?: string;
+  imageUrl?: string;
+  cid?: string;
+  descriptor?: number[];
+};
+
 export default function AttendanceWidget() {
-  const [msg, setMsg] = useState('');
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [msg, setMsg] = useState<string>('');
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   useEffect(() => {
     const backend = process.env.NEXT_PUBLIC_BACKEND_URL || '';
     fetch(`${backend}/api/employees`).then((r) => r.json()).then((j) => {
-      if (j.success) setEmployees(j.data || []);
+      if (j.success) setEmployees(j.data as Employee[] || []);
     }).catch((e) => console.warn(e));
   }, []);
 

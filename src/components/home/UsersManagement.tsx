@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 // Hàm yêu cầu xác nhận MetaMask trước khi thực hiện thao tác
-async function requestMetaMaskApproval(action: string, data: any) {
+async function requestMetaMaskApproval(action: string, data: Record<string, unknown>) {
   if (!(window as any).ethereum) throw new Error('MetaMask chưa được cài đặt');
   // Tùy action, có thể encode dữ liệu khác nhau
   // Ví dụ: gửi tx lên contract với nội dung action và data
@@ -18,9 +18,16 @@ async function requestMetaMaskApproval(action: string, data: any) {
 }
 import { useRouter } from 'next/navigation';
 
+type User = {
+  workerId: string;
+  name?: string;
+  department?: string;
+  imageUrl?: string;
+};
+
 export default function UsersManagement(){
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const backend = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
   const router = useRouter();
 
@@ -32,7 +39,7 @@ export default function UsersManagement(){
         if (!res.ok) throw new Error('Network error');
         const j = await res.json();
         if (mounted){
-          setUsers((j && j.success && j.employees) ? j.employees : []);
+          setUsers((j && j.success && j.employees) ? (j.employees as User[]) : []);
         }
       }catch(e){
         console.warn('Failed to load employees', e);
@@ -68,14 +75,14 @@ export default function UsersManagement(){
               </tr>
             </thead>
             <tbody>
-                {users.map(u => (
+                {users.map((u) => (
                   <tr key={u.workerId} className="border-t">
                     <td className="px-2 py-2 align-top whitespace-nowrap">{u.workerId}</td>
                     <td className="px-2 py-2 align-top">{u.name || '-'}</td>
                     <td className="px-2 py-2 align-top">{u.department || '-'}</td>
                     <td className="px-2 py-2 align-top">
                       {u.imageUrl ? (
-                        <img src={u.imageUrl.startsWith('http') ? u.imageUrl : `${backend}${u.imageUrl}`} alt="avatar" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 6 }} />
+                        <img src={u.imageUrl.startsWith('http') ? u.imageUrl : `${backend}${u.imageUrl}`} alt={u.name ? `Ảnh ${u.name}` : `Ảnh ${u.workerId}` } style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 6 }} />
                       ) : ('-')}
                     </td>
                     <td className="px-2 py-2 align-top">

@@ -1,9 +1,21 @@
 "use client";
+
 import React, { useEffect, useState } from 'react';
 
+type Attendance = {
+  id: string;
+  workerId: string;
+  workerName?: string;
+  date: string;
+  time: string;
+  cid?: string;
+  confidence?: number;
+  matched?: boolean;
+};
+
 export default function AttendanceHistory() {
-  const [loading, setLoading] = useState(true);
-  const [attendances, setAttendances] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [dates, setDates] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -17,15 +29,16 @@ export default function AttendanceHistory() {
         const res = await fetch(`${backend}/api/attendances?limit=1000`);
         const j = await res.json();
         if (!j || !j.success) throw new Error(j && j.error ? j.error : 'Failed to load');
-        const data = j.data || [];
+        const data = j.data as Attendance[] || [];
         setAttendances(data);
         // normalize dates to strings, dedupe, and sort
-        const datesArray = (data.map((d:any) => d.date).filter(Boolean) as unknown[]).map(String);
+        const datesArray = (data.map((d) => d.date).filter(Boolean) as unknown[]).map(String);
         const ds = Array.from(new Set(datesArray)).sort((a,b)=> b.localeCompare(a));
         setDates(ds);
         setSelectedDate(ds.length ? ds[0] : null);
-      } catch (e:any) {
-        setError(e.message || String(e));
+      } catch (e) {
+        const err = e as Error;
+        setError(err.message || String(e));
       } finally {
         setLoading(false);
       }
@@ -64,12 +77,12 @@ export default function AttendanceHistory() {
           <div className="text-gray-600">Không có bản ghi cho ngày này</div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {byDate.map((a:any) => (
+            {byDate.map((a) => (
               <div key={a.id} className="p-3 border rounded flex items-center gap-4">
                 <div style={{width:72, height:72, flex:'0 0 72px'}}>
                   {a.cid ? (
                     <a href={`${(process.env as any).NEXT_PUBLIC_BACKEND_URL || ''}${a.cid}`} target="_blank" rel="noreferrer">
-                      <img src={`${(process.env as any).NEXT_PUBLIC_BACKEND_URL || ''}${a.cid}`} alt="thumb" style={{width:72, height:72, objectFit:'cover', borderRadius:6}} />
+                      <img src={`${(process.env as any).NEXT_PUBLIC_BACKEND_URL || ''}${a.cid}`} alt={a.workerName ? `Ảnh ${a.workerName}` : `Ảnh ${a.cid}` } style={{width:72, height:72, objectFit:'cover', borderRadius:6}} />
                     </a>
                   ) : (
                     <div className="w-18 h-18 bg-gray-200 rounded" />

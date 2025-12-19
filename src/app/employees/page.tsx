@@ -1,8 +1,16 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 
+type Employee = {
+  workerId: string;
+  name: string;
+  department: string;
+  imageUrl?: string;
+  cid?: string;
+  descriptor?: number[];
+};
 export default function EmployeesPage() {
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [msg, setMsg] = useState('');
   const backend = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
@@ -13,7 +21,8 @@ export default function EmployeesPage() {
       if (j.success) setEmployees(j.data || []);
       else setMsg('Lỗi khi lấy danh sách: ' + (j.error || ''));
     } catch (e: any) {
-      setMsg('Lỗi khi gọi API: ' + (e.message || e));
+      const err = e as Error;
+      setMsg('Lỗi khi gọi API: ' + (err.message || String(e)));
     }
   }
 
@@ -28,7 +37,11 @@ export default function EmployeesPage() {
         setMsg(`Đã xóa ${workerId}`);
         fetchList();
       } else setMsg('Lỗi: ' + (j.error || ''));
-    } catch (e: any) { setMsg('Lỗi khi xóa: ' + (e.message || e)); }
+
+    } catch (e: any) {
+      const err = e as Error;
+      setMsg('Lỗi khi xóa: ' + (err.message || String(e)));
+    }
   }
 
   function exportJSON() {
@@ -60,13 +73,13 @@ export default function EmployeesPage() {
           </tr>
         </thead>
         <tbody>
-          {employees.map(emp => (
+          {employees.map((emp) => (
             <tr key={emp.workerId}>
               <td style={{ borderBottom: '1px solid #eee', padding: 8 }}>{emp.workerId}</td>
               <td style={{ borderBottom: '1px solid #eee', padding: 8 }}>{emp.name}</td>
               <td style={{ borderBottom: '1px solid #eee', padding: 8 }}>{emp.department}</td>
               <td style={{ borderBottom: '1px solid #eee', padding: 8 }}>
-                {emp.imageUrl ? <img src={emp.imageUrl} alt="img" style={{ maxWidth: 120 }} /> : (emp.cid ? <span>{emp.cid}</span> : <em>Không có ảnh</em>)}
+                {emp.imageUrl ? <img src={emp.imageUrl} alt={emp.name ? `Ảnh ${emp.name}` : `Ảnh ${emp.workerId}`} style={{ maxWidth: 120 }} /> : (emp.cid ? <span>{emp.cid}</span> : <em>Không có ảnh</em>)}
               </td>
               <td style={{ borderBottom: '1px solid #eee', padding: 8 }}>
                 <button onClick={() => handleDelete(emp.workerId)} style={{ color: '#900' }}>Xóa</button>
