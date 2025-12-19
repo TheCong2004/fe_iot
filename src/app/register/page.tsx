@@ -48,7 +48,7 @@ export default function RegisterPage() {
     setScanningForMark(false);
     setMsg('Đã quét, đang so khớp...');
     try {
-      const backend = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+      const backend = process.env.NEXT_PUBLIC_BACKEND_URL;
       setMsg('Gửi ảnh tới server để quét và lưu điểm danh...');
       try {
         const body: Record<string, unknown> = { dataUrl: d.dataUrl };
@@ -89,7 +89,7 @@ export default function RegisterPage() {
     }
     setMsg('Đang lưu đăng ký...');
     try {
-      const backend = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+      const backend = process.env.NEXT_PUBLIC_BACKEND_URL;
       const payload: Record<string, unknown> = { name: name || undefined, department: department || undefined, dataUrls: samples };
       const res = await fetch(`${backend}/api/register`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
