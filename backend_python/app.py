@@ -17,7 +17,7 @@ ENV_PATH = os.path.join(BASE_DIR, '.env')
 if os.path.exists(ENV_PATH):
     load_dotenv(ENV_PATH)
 
-MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://127.0.0.1:27017/face')
+MONGODB_URI = os.getenv('MONGODB_URI',)
 UPLOAD_DIR = os.path.join(BASE_DIR, 'public', 'uploads')
 ENROLL_DIR = os.path.join(BASE_DIR, 'enroll_images')
 MODEL_DIR = os.path.join(BASE_DIR, 'model')
